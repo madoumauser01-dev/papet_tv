@@ -116,8 +116,11 @@ class _LocalBrowserScreenState extends State<LocalBrowserScreen> {
                             title: name,
                             videoUrl: entity.path,
                             category: 'Fichier Local',
-                            serverIP: 'localhost',
-                            isDirectStream: true,
+                            description: 'Vidéo locale depuis le stockage de l\'appareil.',
+                            thumbnailUrl: '',
+                            rating: 0.0,
+                            duration: 'Inconnue',
+                            releaseYear: '',
                           );
                           context.push('/player', extra: video);
                         }
