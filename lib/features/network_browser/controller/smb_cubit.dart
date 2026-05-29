@@ -52,7 +52,7 @@ class SmbCubit extends Cubit<SmbState> {
   SmbServer? get activeServer => _activeServer;
 
   // Connects to a server (guest or auth mode)
-  Future<void> connect(SmbServer server, {String? username, String? password}) async {
+  Future<void> connect(SmbServer server, {String? username, String? password, String initialPath = '/'}) async {
     emit(SmbConnecting(server));
     try {
       final success = await _smbService.connectToServer(server, username: username, password: password);
@@ -63,8 +63,8 @@ class SmbCubit extends Cubit<SmbState> {
           password: password,
         );
         emit(SmbConnected(_activeServer!));
-        // Immediately list root directory
-        await browsePath('/');
+        // Immediately list target directory
+        await browsePath(initialPath);
       } else {
         emit(SmbError('Identifiants SMB invalides pour ${server.name}.'));
       }

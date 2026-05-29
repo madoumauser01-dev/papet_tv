@@ -7,6 +7,7 @@ import '../../../../widgets/glass_container.dart';
 import '../../../../models/video_item.dart';
 import '../../controller/smb_cubit.dart';
 import '../../data/models/network_file.dart';
+import '../../../favorites/controller/favorites_cubit.dart';
 
 class SmbBrowserScreen extends StatelessWidget {
   const SmbBrowserScreen({Key? key}) : super(key: key);
@@ -91,6 +92,29 @@ class SmbBrowserScreen extends StatelessWidget {
                               ),
                             ),
                           ],
+                        ),
+                        const Spacer(),
+                        BlocBuilder<FavoritesCubit, FavoritesState>(
+                          builder: (context, favState) {
+                            final isFav = context.read<FavoritesCubit>().isFavorite(currentPath, server.ipAddress);
+                            return IconButton(
+                              icon: Icon(
+                                isFav ? Icons.star : Icons.star_border,
+                                color: isFav ? AppColors.primaryGlow : Colors.white70,
+                                size: 28,
+                              ),
+                              onPressed: () {
+                                final name = currentPath == '/' || currentPath.isEmpty
+                                    ? server.name
+                                    : currentPath.split('/').last;
+                                context.read<FavoritesCubit>().toggleFavorite(
+                                      name: name,
+                                      path: currentPath,
+                                      serverIP: server.ipAddress,
+                                    );
+                              },
+                            );
+                          },
                         ),
                       ],
                     ),
