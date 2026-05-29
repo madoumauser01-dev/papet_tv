@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../data/models/smb_server.dart';
 import '../data/models/network_file.dart';
 import '../data/services/smb_service.dart';
+import '../data/services/favorites_service.dart';
 
 // --- STATES ---
 abstract class SmbState {
@@ -54,6 +55,7 @@ class SmbError extends SmbState {
 // --- CUBIT ---
 class SmbCubit extends Cubit<SmbState> {
   final SmbService _smbService;
+  final FavoritesService _favoritesService = FavoritesService();
   
   SmbServer? _activeServer;
   final List<String> _breadcrumbs = [];
@@ -70,21 +72,38 @@ class SmbCubit extends Cubit<SmbState> {
   List<SmbServer> get savedServers => _savedServers;
 
   // Emits the list of saved servers
-  void loadSavedServers() {
-    emit(SmbSavedServersLoaded(List.from(_savedServers)));
+  Future<void> loadSavedServers() async {
+    try {
+      final servers = await _favoritesService.loadServers();
+      _savedServers.clear();
+      _savedServers.addAll(servers);
+      emit(SmbSavedServersLoaded(List.from(_savedServers)));
+    } catch (e) {
+      emit(SmbError('Erreur de chargement des favoris : ${e.toString()}'));
+    }
   }
 
   // Adds a server to the saved servers list
-  void addSavedServer(SmbServer server) {
-    _savedServers.removeWhere((s) => s.ipAddress == server.ipAddress);
-    _savedServers.add(server);
-    loadSavedServers();
+  Future<void> addSavedServer(SmbServer server) async {
+    try {
+      _savedServers.removeWhere((s) => s.ipAddress == server.ipAddress);
+      _savedServers.add(server);
+      await _favoritesService.saveServers(_savedServers);
+      emit(SmbSavedServersLoaded(List.from(_savedServers)));
+    } catch (e) {
+      emit(SmbError('Erreur de sauvegarde du favori : ${e.toString()}'));
+    }
   }
 
   // Removes a server from the saved servers list
-  void removeSavedServer(String id) {
-    _savedServers.removeWhere((s) => s.id == id);
-    loadSavedServers();
+  Future<void> removeSavedServer(String id) async {
+    try {
+      _savedServers.removeWhere((s) => s.id == id);
+      await _favoritesService.saveServers(_savedServers);
+      emit(SmbSavedServersLoaded(List.from(_savedServers)));
+    } catch (e) {
+      emit(SmbError('Erreur de suppression du favori : ${e.toString()}'));
+    }
   }
 
   // Triggers scanning the network for servers
@@ -109,7 +128,7 @@ class SmbCubit extends Cubit<SmbState> {
           username: username,
           password: password,
         );
-        addSavedServer(_activeServer!);
+        await addSavedServer(_activeServer!);
         emit(SmbConnected(_activeServer!));
         // Immediately list root directory
         await browsePath('/');

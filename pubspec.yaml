@@ -39,6 +39,8 @@ dependencies:
   go_router: ^14.0.0
   smb_connect: ^0.0.9
   network_info_plus: ^8.1.0
+  shared_preferences: ^2.3.2
+
 
 dev_dependencies:
   flutter_test:

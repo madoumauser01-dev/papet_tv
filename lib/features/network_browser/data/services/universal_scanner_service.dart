@@ -66,7 +66,7 @@ class UniversalScannerService {
         
         tasks.add(() async {
           try {
-            final socket = await Socket.connect(ip, config.port, timeout: const Duration(milliseconds: 2000));
+            final socket = await Socket.connect(ip, config.port, timeout: const Duration(milliseconds: 300));
             socket.destroy();
             
             // Prevent duplicates if device responds on multiple ports (we keep the first discovered type)
@@ -110,7 +110,7 @@ class UniversalScannerService {
     }
     
     // Process tasks in chunks to avoid "Too many open files" exception on Android
-    const chunkSize = 30;
+    const chunkSize = 50;
     for (int i = 0; i < tasks.length; i += chunkSize) {
       final end = (i + chunkSize < tasks.length) ? i + chunkSize : tasks.length;
       final chunk = tasks.sublist(i, end).map((task) => task()).toList();

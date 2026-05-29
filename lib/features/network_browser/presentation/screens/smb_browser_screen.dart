@@ -130,8 +130,9 @@ class SmbBrowserScreen extends StatelessWidget {
                               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                             ),
                           ),
-                          ...breadcrumbs.map((crumb) {
-                            final index = breadcrumbs.indexOf(crumb);
+                          ...breadcrumbs.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final crumb = entry.value;
                             final pathBuilder = '/${breadcrumbs.sublist(0, index + 1).join('/')}';
                             return Row(
                               children: [
