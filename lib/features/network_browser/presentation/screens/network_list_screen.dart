@@ -106,8 +106,8 @@ class _NetworkListScreenState extends State<NetworkListScreen> {
                 Navigator.pop(dialogContext);
                 context.read<SmbCubit>().connect(
                   server,
-                  username: userController.text,
-                  password: passController.text,
+                  username: userController.text.trim(),
+                  password: passController.text.trim(),
                 );
               },
               child: const Text('Se connecter', style: TextStyle(color: AppColors.primaryGlow, fontWeight: FontWeight.bold)),
@@ -355,14 +355,24 @@ class _NetworkListScreenState extends State<NetworkListScreen> {
       body: BlocConsumer<SmbCubit, SmbState>(
         listener: (context, state) {
           if (state is SmbError) {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.message),
+                content: Text('❌ ${state.message}'),
                 backgroundColor: AppColors.error,
-                duration: const Duration(seconds: 3),
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          } else if (state is SmbConnecting) {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('🔄 Connexion en cours...'),
+                duration: Duration(seconds: 10),
               ),
             );
           } else if (state is SmbBrowsing) {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
             context.push('/browser');
           }
         },
