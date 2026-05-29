@@ -25,7 +25,16 @@ class _NetworkListScreenState extends State<NetworkListScreen> {
   @override
   void initState() {
     super.initState();
-    _connect();
+    final cubit = context.read<SmbCubit>();
+    if (cubit.state is SmbBrowsing || cubit.state is SmbConnected) {
+      Future.microtask(() {
+        if (mounted) {
+          context.push('/browser');
+        }
+      });
+    } else {
+      _connect();
+    }
   }
 
   void _connect() {
@@ -50,6 +59,7 @@ class _NetworkListScreenState extends State<NetworkListScreen> {
           }
         },
         builder: (context, state) {
+          final isConnected = state is SmbBrowsing || state is SmbConnected;
           final isError = state is SmbError;
           final errorMessage = isError ? state.message : '';
 
@@ -135,6 +145,45 @@ class _NetworkListScreenState extends State<NetworkListScreen> {
                               onPressed: _connect,
                               child: const Text(
                                 'Réessayer',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ] else if (isConnected) ...[
+                            const Icon(
+                              Icons.check_circle_outline,
+                              color: AppColors.success,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Connecté au serveur',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              '192.168.1.80',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryGlow,
+                                foregroundColor: Colors.black,
+                                minimumSize: const Size(180, 48),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                              ),
+                              onPressed: () => context.push('/browser'),
+                              child: const Text(
+                                'Ouvrir l\'explorateur',
                                 style: TextStyle(fontWeight: FontWeight.bold),
                               ),
                             ),
