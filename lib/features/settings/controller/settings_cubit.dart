@@ -2,73 +2,60 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsState {
+  final bool isDarkMode;
   final String username;
-  final String avatarUrl;
-  final int themeIndex;
+  final String? profilePhotoPath;
 
   const SettingsState({
+    required this.isDarkMode,
     required this.username,
-    required this.avatarUrl,
-    required this.themeIndex,
+    this.profilePhotoPath,
   });
 
   SettingsState copyWith({
+    bool? isDarkMode,
     String? username,
-    String? avatarUrl,
-    int? themeIndex,
+    String? profilePhotoPath,
   }) {
     return SettingsState(
+      isDarkMode: isDarkMode ?? this.isDarkMode,
       username: username ?? this.username,
-      avatarUrl: avatarUrl ?? this.avatarUrl,
-      themeIndex: themeIndex ?? this.themeIndex,
+      profilePhotoPath: profilePhotoPath ?? this.profilePhotoPath,
     );
   }
 }
 
 class SettingsCubit extends Cubit<SettingsState> {
-  static const _keyUser = 'settings_username';
-  static const _keyAvatar = 'settings_avatar';
-  static const _keyTheme = 'settings_theme';
-
-  static const defaultAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop';
-
-  SettingsCubit() : super(const SettingsState(
-    username: 'Utilisateur',
-    avatarUrl: defaultAvatar,
-    themeIndex: 0,
-  )) {
-    loadSettings();
-  }
+  SettingsCubit() : super(const SettingsState(isDarkMode: true, username: 'Utilisateur'));
 
   Future<void> loadSettings() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final username = prefs.getString(_keyUser) ?? 'Utilisateur';
-      final avatarUrl = prefs.getString(_keyAvatar) ?? defaultAvatar;
-      final themeIndex = prefs.getInt(_keyTheme) ?? 0;
-      emit(SettingsState(
-        username: username,
-        avatarUrl: avatarUrl,
-        themeIndex: themeIndex,
-      ));
-    } catch (_) {}
+    final prefs = await SharedPreferences.getInstance();
+    final isDarkMode = prefs.getBool('isDarkMode') ?? true;
+    final username = prefs.getString('username') ?? 'Utilisateur';
+    final profilePhotoPath = prefs.getString('profilePhotoPath');
+
+    emit(SettingsState(
+      isDarkMode: isDarkMode,
+      username: username,
+      profilePhotoPath: profilePhotoPath,
+    ));
+  }
+
+  Future<void> toggleTheme(bool isDark) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isDarkMode', isDark);
+    emit(state.copyWith(isDarkMode: isDark));
   }
 
   Future<void> updateUsername(String newName) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyUser, newName);
+    await prefs.setString('username', newName);
     emit(state.copyWith(username: newName));
   }
 
-  Future<void> updateAvatar(String newAvatarUrl) async {
+  Future<void> updateProfilePhoto(String path) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyAvatar, newAvatarUrl);
-    emit(state.copyWith(avatarUrl: newAvatarUrl));
-  }
-
-  Future<void> updateTheme(int newThemeIndex) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keyTheme, newThemeIndex);
-    emit(state.copyWith(themeIndex: newThemeIndex));
+    await prefs.setString('profilePhotoPath', path);
+    emit(state.copyWith(profilePhotoPath: path));
   }
 }

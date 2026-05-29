@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -20,38 +21,52 @@ class ShellScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true, // Très important pour que le contenu passe sous la barre floutée
       body: navigationShell,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: navigationShell.currentIndex,
-        onTap: (index) => _onTap(context, index),
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: AppColors.surface,
-        selectedItemColor: AppColors.primaryGlow,
-        unselectedItemColor: AppColors.textSecondary,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-        unselectedLabelStyle: const TextStyle(fontSize: 11),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dns),
-            activeIcon: Icon(Icons.dns, color: AppColors.primaryGlow),
-            label: 'Réseau',
+      bottomNavigationBar: ClipRRect(
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+          child: Container(
+            color: Theme.of(context).brightness == Brightness.dark 
+              ? Colors.black.withOpacity(0.5) 
+              : Colors.white.withOpacity(0.6),
+            child: SafeArea(
+              child: BottomNavigationBar(
+                elevation: 0,
+                backgroundColor: Colors.transparent,
+                currentIndex: navigationShell.currentIndex,
+                onTap: (index) => _onTap(context, index),
+                type: BottomNavigationBarType.fixed,
+                selectedItemColor: const Color(0xFF007AFF), // Bleu iOS
+                unselectedItemColor: Colors.grey,
+                selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
+                unselectedLabelStyle: const TextStyle(fontSize: 10),
+                items: const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.cloud_outlined),
+                    activeIcon: Icon(Icons.cloud),
+                    label: 'Réseau',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.favorite_outline),
+                    activeIcon: Icon(Icons.favorite),
+                    label: 'Favoris',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.folder_outlined),
+                    activeIcon: Icon(Icons.folder),
+                    label: 'Fichiers',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.settings_outlined),
+                    activeIcon: Icon(Icons.settings),
+                    label: 'Réglages',
+                  ),
+                ],
+              ),
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.star_border),
-            activeIcon: Icon(Icons.star, color: AppColors.primaryGlow),
-            label: 'Favoris',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.phone_android),
-            activeIcon: Icon(Icons.phone_android, color: AppColors.primaryGlow),
-            label: 'Local',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            activeIcon: Icon(Icons.settings, color: AppColors.primaryGlow),
-            label: 'Paramètres',
-          ),
-        ],
+        ),
       ),
     );
   }

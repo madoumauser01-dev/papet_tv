@@ -2,8 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
+import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 
 import '../../core/constants/app_colors.dart';
@@ -20,9 +19,8 @@ class VideoPlayerScreen extends StatefulWidget {
 }
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
-  // Media Kit Player
-  late final Player player = Player();
-  late final VideoController controller = VideoController(player);
+  // VLC Player
+  late VlcPlayerController _vlcController;
 
   bool _showControls = true;
   Timer? _controlsTimer;
@@ -33,20 +31,16 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   bool _isDraggingVolume = false;
   bool _isDraggingBrightness = false;
 
-  // Subscriptions
-  late StreamSubscription<bool> playingSub;
-  late StreamSubscription<Duration> positionSub;
-  late StreamSubscription<Duration> durationSub;
-
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   bool _isPlaying = true;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _initPlayer();
     _initBrightness();
+    _initPlayer();
     _startControlsTimer();
   }
 
@@ -66,35 +60,58 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       final server = context.read<SmbCubit>().activeServer;
       if (server != null) {
         final auth = (server.username != null && server.username!.isNotEmpty)
-            ? '${server.username}:${server.password}@'
+            ? Uri.encodeComponent(server.username!) + ':' + Uri.encodeComponent(server.password!) + '@'
             : '';
-        final path = playableUrl.startsWith('/') ? playableUrl : '/$playableUrl';
-        playableUrl = 'smb://$auth${server.ipAddress}$path';
+        
+        if (playableUrl.startsWith('smb://')) {
+          playableUrl = playableUrl.replaceFirst('smb://', 'smb://$auth');
+        } else {
+          final path = playableUrl.startsWith('/') ? playableUrl : '/$playableUrl';
+          playableUrl = 'smb://$auth${server.ipAddress}$path';
+        }
       }
     }
 
-    player.open(Media(playableUrl));
-    player.setVolume(_volume);
+    _vlcController = VlcPlayerController.network(
+      playableUrl,
+      hwAcc: HwAcc.full,
+      autoPlay: true,
+      options: VlcPlayerOptions(
+        advanced: VlcAdvancedOptions([
+          VlcAdvancedOptions.networkCaching(2000),
+        ]),
+      ),
+    );
 
-    playingSub = player.stream.playing.listen((playing) {
-      setState(() => _isPlaying = playing);
+    _vlcController.addListener(_onPlayerStateChanged);
+  }
+
+  void _onPlayerStateChanged() async {
+    if (!mounted) return;
+
+    if (_vlcController.value.isInitialized && !_isInitialized) {
+      setState(() => _isInitialized = true);
+      _vlcController.setVolume(_volume.toInt());
+    }
+
+    setState(() {
+      _isPlaying = _vlcController.value.isPlaying;
+      _position = _vlcController.value.position;
+      _duration = _vlcController.value.duration;
     });
 
-    positionSub = player.stream.position.listen((position) {
-      setState(() => _position = position);
-    });
-
-    durationSub = player.stream.duration.listen((duration) {
-      setState(() => _duration = duration);
-    });
+    if (_vlcController.value.hasError) {
+      print("Erreur VLC: ${_vlcController.value.errorDescription}");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur vidéo : ${_vlcController.value.errorDescription}')),
+      );
+    }
   }
 
   @override
   void dispose() {
-    playingSub.cancel();
-    positionSub.cancel();
-    durationSub.cancel();
-    player.dispose();
+    _vlcController.removeListener(_onPlayerStateChanged);
+    _vlcController.dispose();
     _controlsTimer?.cancel();
     ScreenBrightness().resetApplicationScreenBrightness();
     super.dispose();
@@ -112,7 +129,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 
   void _togglePlay() {
-    player.playOrPause();
+    if (_isPlaying) {
+      _vlcController.pause();
+    } else {
+      _vlcController.play();
+    }
     _resetControlsTimeout();
   }
 
@@ -156,7 +177,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       setState(() {
         _volume = (_volume + (delta * 200)).clamp(0.0, 200.0);
       });
-      player.setVolume(_volume); // media_kit supporte le volume boost
+      _vlcController.setVolume(_volume.toInt()); 
     }
     _resetControlsTimeout();
   }
@@ -185,10 +206,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           final width = MediaQuery.of(context).size.width;
           if (details.globalPosition.dx < width / 2) {
             // Rewind 10s
-            player.seek(_position - const Duration(seconds: 10));
+            _vlcController.seekTo(_position - const Duration(seconds: 10));
           } else {
             // Forward 10s
-            player.seek(_position + const Duration(seconds: 10));
+            _vlcController.seekTo(_position + const Duration(seconds: 10));
           }
           _resetControlsTimeout();
         },
@@ -199,10 +220,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           children: [
             // Video Player View
             Positioned.fill(
-              child: Video(
-                controller: controller,
-                controls: NoVideoControls, // We use custom controls
-                fit: BoxFit.contain,
+              child: Center(
+                child: VlcPlayer(
+                  controller: _vlcController,
+                  aspectRatio: 16 / 9, // Par défaut, VLC l'ajustera
+                  placeholder: const Center(child: CircularProgressIndicator()),
+                ),
               ),
             ),
 
@@ -285,7 +308,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                             IconButton(
                               icon: const Icon(Icons.replay_10, color: Colors.white, size: 36),
                               onPressed: () {
-                                player.seek(_position - const Duration(seconds: 10));
+                                _vlcController.seekTo(_position - const Duration(seconds: 10));
                                 _resetControlsTimeout();
                               },
                             ),
@@ -317,7 +340,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                             IconButton(
                               icon: const Icon(Icons.forward_10, color: Colors.white, size: 36),
                               onPressed: () {
-                                player.seek(_position + const Duration(seconds: 10));
+                                _vlcController.seekTo(_position + const Duration(seconds: 10));
                                 _resetControlsTimeout();
                               },
                             ),
@@ -345,7 +368,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                   min: 0.0,
                                   max: max(_duration.inMilliseconds.toDouble(), 1.0),
                                   onChanged: (val) {
-                                    player.seek(Duration(milliseconds: val.toInt()));
+                                    _vlcController.seekTo(Duration(milliseconds: val.toInt()));
                                     _resetControlsTimeout();
                                   },
                                 ),

@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'core/constants/app_theme.dart';
 import 'routes/app_routes.dart';
-import 'package:media_kit/media_kit.dart';
 import 'features/network_browser/data/services/smb_service.dart';
 import 'features/network_browser/controller/smb_cubit.dart';
 import 'features/favorites/controller/favorites_cubit.dart';
 import 'features/settings/controller/settings_cubit.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  MediaKit.ensureInitialized();
-  runApp(const PapetTvApp());
+  // On charge les paramètres avant le démarrage de l'app
+  final settingsCubit = SettingsCubit();
+  await settingsCubit.loadSettings();
+  
+  runApp(PapetTvApp(settingsCubit: settingsCubit));
 }
 
 class PapetTvApp extends StatelessWidget {
-  const PapetTvApp({Key? key}) : super(key: key);
+  final SettingsCubit settingsCubit;
+  
+  const PapetTvApp({Key? key, required this.settingsCubit}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -27,8 +30,8 @@ class PapetTvApp extends StatelessWidget {
         BlocProvider<FavoritesCubit>(
           create: (context) => FavoritesCubit(),
         ),
-        BlocProvider<SettingsCubit>(
-          create: (context) => SettingsCubit(),
+        BlocProvider<SettingsCubit>.value(
+          value: settingsCubit,
         ),
       ],
       child: BlocBuilder<SettingsCubit, SettingsState>(
@@ -36,7 +39,9 @@ class PapetTvApp extends StatelessWidget {
           return MaterialApp.router(
             title: 'Papet TV',
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.getTheme(state.themeIndex),
+            theme: ThemeData.light(),
+            darkTheme: ThemeData.dark(),
+            themeMode: state.isDarkMode ? ThemeMode.dark : ThemeMode.light,
             routerConfig: AppRoutes.router,
           );
         },
