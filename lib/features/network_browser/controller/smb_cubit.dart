@@ -65,7 +65,7 @@ class SmbCubit extends Cubit<SmbState> {
   final List<SmbServer> _savedServers = [];
 
   SmbCubit(this._smbService) : super(SmbInitial()) {
-    loadSavedServers();
+    Future.microtask(() => loadSavedServers());
   }
 
   SmbServer? get activeServer => _activeServer;
