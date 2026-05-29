@@ -2,26 +2,9 @@ import 'dart:async';
 import 'package:smb_connect/smb_connect.dart';
 import '../models/smb_server.dart';
 import '../models/network_file.dart';
-import 'universal_scanner_service.dart';
 
 class SmbService {
   SmbConnect? _connection;
-
-  // Real scan using UniversalScannerService
-  Future<List<SmbServer>> scanLocalNetwork() async {
-    final List<SmbServer> servers = [];
-    final scanner = UniversalScannerService();
-    
-    try {
-      // Collects all discovered servers (SMB, DLNA, FTP) from the stream
-      final List<SmbServer> streamList = await scanner.startUniversalScan().toList();
-      servers.addAll(streamList);
-    } catch (e) {
-      print('Error during universal network scan: $e');
-    }
-    
-    return servers;
-  }
 
   // Connects to a real SMB server
   Future<bool> connectToServer(SmbServer server, {String? username, String? password}) async {

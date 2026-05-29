@@ -49,7 +49,7 @@ class SmbBrowserScreen extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: BlocBuilder<SmbCubit, SmbState>(
             builder: (context, state) {
-              if (state is SmbScanning || state is SmbConnecting) {
+              if (state is SmbConnecting) {
                 return const Center(
                   child: CircularProgressIndicator(color: AppColors.primary),
                 );
@@ -91,26 +91,6 @@ class SmbBrowserScreen extends StatelessWidget {
                               ),
                             ),
                           ],
-                        ),
-                        const Spacer(),
-                        
-                        // Disconnect Button
-                        TvFocusableCard(
-                          onTap: () {
-                            context.read<SmbCubit>().disconnectServer();
-                            context.pop(); // Return to local network scanner
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            color: AppColors.error.withOpacity(0.2),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.power_settings_new, color: Colors.red, size: 18),
-                                SizedBox(width: 6),
-                                Text('Déconnecter', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          ),
                         ),
                       ],
                     ),

@@ -2,7 +2,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../data/models/smb_server.dart';
 import '../data/models/network_file.dart';
 import '../data/services/smb_service.dart';
-import '../data/services/favorites_service.dart';
 
 // --- STATES ---
 abstract class SmbState {
@@ -10,18 +9,6 @@ abstract class SmbState {
 }
 
 class SmbInitial extends SmbState {}
-
-class SmbScanning extends SmbState {}
-
-class SmbServerListLoaded extends SmbState {
-  final List<SmbServer> servers;
-  const SmbServerListLoaded(this.servers);
-}
-
-class SmbSavedServersLoaded extends SmbState {
-  final List<SmbServer> servers;
-  const SmbSavedServersLoaded(this.servers);
-}
 
 class SmbConnecting extends SmbState {
   final SmbServer server;
@@ -55,67 +42,14 @@ class SmbError extends SmbState {
 // --- CUBIT ---
 class SmbCubit extends Cubit<SmbState> {
   final SmbService _smbService;
-  final FavoritesService _favoritesService = FavoritesService();
   
   SmbServer? _activeServer;
   final List<String> _breadcrumbs = [];
   String _currentPath = '/';
 
-  // Saved servers list starts empty
-  final List<SmbServer> _savedServers = [];
-
-  SmbCubit(this._smbService) : super(SmbInitial()) {
-    Future.microtask(() => loadSavedServers());
-  }
+  SmbCubit(this._smbService) : super(SmbInitial());
 
   SmbServer? get activeServer => _activeServer;
-  List<SmbServer> get savedServers => _savedServers;
-
-  // Emits the list of saved servers
-  Future<void> loadSavedServers() async {
-    try {
-      final servers = await _favoritesService.loadServers();
-      _savedServers.clear();
-      _savedServers.addAll(servers);
-      emit(SmbSavedServersLoaded(List.from(_savedServers)));
-    } catch (e) {
-      emit(SmbError('Erreur de chargement des favoris : ${e.toString()}'));
-    }
-  }
-
-  // Adds a server to the saved servers list
-  Future<void> addSavedServer(SmbServer server) async {
-    try {
-      _savedServers.removeWhere((s) => s.ipAddress == server.ipAddress);
-      _savedServers.add(server);
-      await _favoritesService.saveServers(_savedServers);
-      emit(SmbSavedServersLoaded(List.from(_savedServers)));
-    } catch (e) {
-      emit(SmbError('Erreur de sauvegarde du favori : ${e.toString()}'));
-    }
-  }
-
-  // Removes a server from the saved servers list
-  Future<void> removeSavedServer(String id) async {
-    try {
-      _savedServers.removeWhere((s) => s.id == id);
-      await _favoritesService.saveServers(_savedServers);
-      emit(SmbSavedServersLoaded(List.from(_savedServers)));
-    } catch (e) {
-      emit(SmbError('Erreur de suppression du favori : ${e.toString()}'));
-    }
-  }
-
-  // Triggers scanning the network for servers
-  Future<void> scanNetwork() async {
-    emit(SmbScanning());
-    try {
-      final servers = await _smbService.scanLocalNetwork();
-      emit(SmbServerListLoaded(servers));
-    } catch (e) {
-      emit(SmbError('Erreur lors du scan réseau : ${e.toString()}'));
-    }
-  }
 
   // Connects to a server (guest or auth mode)
   Future<void> connect(SmbServer server, {String? username, String? password}) async {
@@ -128,7 +62,6 @@ class SmbCubit extends Cubit<SmbState> {
           username: username,
           password: password,
         );
-        await addSavedServer(_activeServer!);
         emit(SmbConnected(_activeServer!));
         // Immediately list root directory
         await browsePath('/');
@@ -148,7 +81,6 @@ class SmbCubit extends Cubit<SmbState> {
     }
 
     try {
-      // Re-emit connecting/loading state for smooth transition
       _currentPath = path;
       
       // Update breadcrumbs history
@@ -175,9 +107,6 @@ class SmbCubit extends Cubit<SmbState> {
   // Go back one folder level
   Future<void> browseBack() async {
     if (_breadcrumbs.isEmpty) {
-      // Return to server list
-      _activeServer = null;
-      await scanNetwork();
       return;
     }
 
@@ -191,6 +120,6 @@ class SmbCubit extends Cubit<SmbState> {
     _activeServer = null;
     _breadcrumbs.clear();
     _currentPath = '/';
-    scanNetwork();
+    emit(SmbInitial());
   }
 }
