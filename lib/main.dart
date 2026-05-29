@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/constants/app_theme.dart';
 import 'routes/app_routes.dart';
+import 'package:media_kit/media_kit.dart';
 import 'features/network_browser/data/services/smb_service.dart';
 import 'features/network_browser/controller/smb_cubit.dart';
 import 'features/favorites/controller/favorites_cubit.dart';
 import 'features/settings/controller/settings_cubit.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
   runApp(const PapetTvApp());
 }
 
